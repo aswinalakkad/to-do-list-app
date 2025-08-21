@@ -34,14 +34,3 @@ st.markdown(
         font-weight: 600;
         margin-left: 8px;
     }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
-# --- Input Fields with Labels ---
-st.markdown("### Task title")
-title = st.text_input("", placeholder="Enter task title")
-
-st.markdown("### Notes (optional)")
-description = st.text_area("", placeholder="Enter notes here")
