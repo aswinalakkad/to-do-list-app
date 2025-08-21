@@ -45,5 +45,6 @@ else:
 
         if st.button(f"Delete {i}"):
             st.session_state.tasks.pop(i)
-            st.experimental_rerun()
+            st.rerun()
+
 
