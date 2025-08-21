@@ -1,112 +1,114 @@
 import streamlit as st
 import datetime
 
-st.title("📝 To-Do App with Filters & Sorting")
+st.set_page_config(page_title="To-Do App", page_icon="📝")
+st.title("📝 To-Do App")
 
-# --- Session state ---
+# --- Session State ---
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# --- Add Task Form ---
-with st.form("add_task", clear_on_submit=True):
+
+# --- Add Task ---
+with st.form("add_task"):
     title = st.text_input("Task Title")
     notes = st.text_area("Notes")
     due = st.date_input("Due Date", datetime.date.today())
     priority = st.selectbox("Priority", ["low", "medium", "high"])
     submitted = st.form_submit_button("Add Task")
 
-    if submitted:
-        if title.strip():
-            st.session_state.tasks.append({
-                "title": title,
-                "notes": notes,
-                "due": due,
-                "priority": priority,
-                "created_at": datetime.datetime.now(),
-                "completed": False
-            })
-            st.success("Task added!")
-            st.rerun()
-        else:
-            st.warning("⚠️ Please enter a task title before adding.")
+    if submitted and title:
+        st.session_state.tasks.append({
+            "title": title,
+            "notes": notes,
+            "due": due,
+            "priority": priority,
+            "created_at": datetime.datetime.now(),
+            "completed": False
+        })
 
-# --- Tabs for Active / Completed ---
-tab1, tab2 = st.tabs(["📌 Active Tasks", "✅ Completed Tasks"])
 
-# === Sidebar Filters & Sorting ===
+# --- Sidebar Filters & Sorting ---
 st.sidebar.header("🔍 Filters & Sorting")
 
-priority_filter = st.sidebar.multiselect(
-    "Filter by Priority",
-    ["low", "medium", "high"],
-    default=["low", "medium", "high"]
-)
+# Priority filter with "Select All"
+all_priorities = ["low", "medium", "high"]
+select_all = st.sidebar.checkbox("Select All Priorities", value=True)
 
+if select_all:
+    priority_filter = st.sidebar.multiselect(
+        "Filter by Priority",
+        all_priorities,
+        default=all_priorities
+    )
+else:
+    priority_filter = st.sidebar.multiselect(
+        "Filter by Priority",
+        all_priorities,
+        default=[]
+    )
+
+# Date filter
 date_range = st.sidebar.date_input(
     "Filter by Due Date Range",
     value=(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=30))
 )
 
+# Sorting
 sort_by = st.sidebar.selectbox(
     "Sort By",
     ["due", "priority", "created_at"]
 )
-
 sort_order = st.sidebar.radio("Sort Order", ["Ascending", "Descending"])
 
-# --- Helper: filter & sort ---
-def filter_and_sort(tasks):
-    filtered = [t for t in tasks if t["priority"] in priority_filter]
+# View toggle
+view_option = st.sidebar.radio("View Tasks", ["Active", "Completed", "All"])
 
-    if isinstance(date_range, tuple) and len(date_range) == 2:
-        start, end = date_range
-        filtered = [t for t in filtered if start <= t["due"] <= end]
 
-    reverse = (sort_order == "Descending")
+# --- Apply Filters ---
+tasks = st.session_state.tasks
 
-    if sort_by == "priority":
-        # custom sort: low < medium < high
-        priority_order = {"low": 0, "medium": 1, "high": 2}
-        filtered.sort(key=lambda t: priority_order[t["priority"]], reverse=reverse)
-    else:
-        filtered.sort(key=lambda t: t[sort_by], reverse=reverse)
+# Filter by priority
+if priority_filter:
+    tasks = [t for t in tasks if t["priority"] in priority_filter]
 
-    return filtered
+# Filter by date range
+if isinstance(date_range, tuple) and len(date_range) == 2:
+    start_date, end_date = date_range
+    tasks = [t for t in tasks if start_date <= t["due"] <= end_date]
 
-# --- Active Tasks ---
-with tab1:
-    active_tasks = filter_and_sort([t for t in st.session_state.tasks if not t["completed"]])
-    if not active_tasks:
-        st.info("No active tasks 🎉")
-    else:
-        for i, task in enumerate(active_tasks, start=1):
-            st.markdown(f"**{i}. {task['title']}** (priority: {task['priority']}, due: {task['due']})")
+# Filter by status
+if view_option == "Active":
+    tasks = [t for t in tasks if not t["completed"]]
+elif view_option == "Completed":
+    tasks = [t for t in tasks if t["completed"]]
+
+
+# --- Sorting ---
+reverse = sort_order == "Descending"
+tasks.sort(key=lambda x: x[sort_by], reverse=reverse)
+
+
+# --- Show Tasks ---
+st.subheader("Your Tasks")
+if not tasks:
+    st.info("No tasks to show with current filters.")
+else:
+    for i, task in enumerate(tasks, start=1):
+        col1, col2, col3 = st.columns([5, 2, 2])
+
+        with col1:
+            st.markdown(f"**{task['title']}** (priority: {task['priority']}, due: {task['due']})")
             st.caption(f"Added {task['created_at'].strftime('%Y-%m-%d %H:%M')}")
-            c1, c2 = st.columns(2)
-            if c1.button(f"✅ Mark Done {i}", key=f"done_{i}"):
-                idx = st.session_state.tasks.index(task)
-                st.session_state.tasks[idx]["completed"] = True
-                st.rerun()
-            if c2.button(f"🗑️ Delete {i}", key=f"del_active_{i}"):
-                idx = st.session_state.tasks.index(task)
-                st.session_state.tasks.pop(idx)
+            if task["notes"]:
+                st.write(f"📝 {task['notes']}")
+
+        with col2:
+            if st.button(f"{'✅ Undo' if task['completed'] else '✔️ Done'} {i}"):
+                task["completed"] = not task["completed"]
                 st.rerun()
 
-# --- Completed Tasks ---
-with tab2:
-    completed_tasks = filter_and_sort([t for t in st.session_state.tasks if t["completed"]])
-    if not completed_tasks:
-        st.info("No completed tasks yet ✅")
-    else:
-        for i, task in enumerate(completed_tasks, start=1):
-            st.markdown(f"~~{i}. {task['title']}~~ (priority: {task['priority']}, due: {task['due']})")
-            st.caption(f"Completed {task['created_at'].strftime('%Y-%m-%d %H:%M')}")
-            c1, c2 = st.columns(2)
-            if c1.button(f"↩️ Mark Active {i}", key=f"undo_{i}"):
-                idx = st.session_state.tasks.index(task)
-                st.session_state.tasks[idx]["completed"] = False
-                st.rerun()
-            if c2.button(f"🗑️ Delete {i}", key=f"del_done_{i}"):
-                idx = st.session_state.tasks.index(task)
-                st.session_state.tasks.pop(idx)
+        with col3:
+            if st.button(f"🗑️ Delete {i}"):
+                st.session_state.tasks.remove(task)
                 st.rerun()
