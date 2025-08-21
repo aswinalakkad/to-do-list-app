@@ -1,37 +1,34 @@
 import streamlit as st
+import datetime
 
-st.set_page_config(page_title="To-Do List", page_icon="📝")
-st.title("📝 Simple To-Do List")
+st.title("📝 To-Do App")
 
-# Initialize tasks
+# Session state to store tasks
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# Input for new task
-new_task = st.text_input("Add a new task:")
+# Add new task
+with st.form("add_task"):
+    title = st.text_input("Task Title")
+    notes = st.text_area("Notes")
+    due = st.date_input("Due Date", datetime.date.today())
+    priority = st.selectbox("Priority", ["low", "medium", "high"])
+    submitted = st.form_submit_button("Add Task")
 
-if st.button("➕ Add Task"):
-    if new_task.strip() != "":
-        st.session_state.tasks.append({"task": new_task, "done": False})
-        st.experimental_rerun()
+    if submitted and title:
+        st.session_state.tasks.append({
+            "title": title,
+            "notes": notes,
+            "due": due,
+            "priority": priority,
+            "created_at": datetime.datetime.now()
+        })
 
-# Show task list
+# Show tasks
 st.subheader("Your Tasks")
-if len(st.session_state.tasks) == 0:
-    st.info("No tasks yet! Add one above 👆")
-else:
-    for i, t in enumerate(st.session_state.tasks):
-        col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
-
-        with col1:
-            st.write("✅" if t["done"] else "⬜", t["task"])
-
-        with col2:
-            if st.button("✔️ Done" if not t["done"] else "↩️ Undo", key=f"done{i}"):
-                st.session_state.tasks[i]["done"] = not st.session_state.tasks[i]["done"]
-                st.experimental_rerun()
-
-        with col3:
-            if st.button("❌ Delete", key=f"del{i}"):
-                del st.session_state.tasks[i]
-                st.experimental_rerun()
+for i, task in enumerate(st.session_state.tasks):
+    st.markdown(f"**{task['title']}** (priority: {task['priority']}, due: {task['due']})")
+    st.caption(f"Added {task['created_at'].strftime('%Y-%m-%d %H:%M')}")
+    if st.button(f"Delete {i}"):
+        st.session_state.tasks.pop(i)
+        st.experimental_rerun()
