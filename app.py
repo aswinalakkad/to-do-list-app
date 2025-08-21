@@ -5,7 +5,7 @@ st.set_page_config(page_title="To-Do App", page_icon="✨", layout="centered")
 
 # --- Custom CSS for modern UI ---
 st.markdown(
-"""
+    """
     <style>
     .main {
         background-color: #f9fafb;
@@ -26,7 +26,7 @@ st.markdown(
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .priority-pill {
-        background-color: #6b7280; /* Grey instead of black */
+        background-color: #374151;
         color: white;
         padding: 3px 10px;
         border-radius: 8px;
@@ -36,83 +36,119 @@ st.markdown(
     }
     .completed {
         text-decoration: line-through;
-        color: #9ca3af;
+        text-decoration-thickness: 2px;
+        text-decoration-color: #ef4444;
+        text-decoration-offset: 3px;
+    }
+    .segmented-control button {
+        margin-right: 5px;
     }
     </style>
-""",
-    unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True,
 )
 
-# --- Initialize Session State ---
+st.title("To-Do ✨")
+
+# --- Session State ---
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# --- Add Task Form ---
-with st.form("task_form", clear_on_submit=True):
-    st.markdown("### ➕ Add New Task")
-    title = st.text_input("Title")  # Added Label
-    description = st.text_area("Description")  # Added Label
-    priority = st.selectbox("Priority", ["Low", "Medium", "High"])
-    due_date = st.date_input("Due Date", datetime.date.today())
-    submitted = st.form_submit_button("Add Task")
+if "view" not in st.session_state:
+    st.session_state.view = "All"
 
-    if submitted and title:
-        st.session_state.tasks.append({
-            "title": title,
-            "description": description,
-            "priority": priority,
-            "due_date": due_date,
-            "completed": False,
-            "created_at": datetime.datetime.now()
-        })
+# --- Compact Toggle ---
+compact_mode = st.toggle("Compact", value=False)
 
-# --- Search Bar ---
-search_query = st.text_input("🔍 Search tasks", "")
+# --- Add Task ---
+with st.container():
+    with st.form("add_task", clear_on_submit=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            title = st.text_input("Task title", label_visibility="collapsed")
+        with col2:
+            due = st.date_input("Due date", datetime.date.today(), label_visibility="collapsed")
 
-# --- Filters ---
-filter_option = st.radio("View", ["All", "Active", "Completed"], horizontal=True)
-sort_option = st.selectbox("Sort by", ["Select All", "Priority", "Date"])
+        notes = st.text_area("Notes (optional)", label_visibility="collapsed")
+        col3, col4 = st.columns([1, 3])
+        with col3:
+            priority = st.selectbox("Priority", ["low", "medium", "high"])
+        with col4:
+            tags = st.text_input("Tags: work, personal")
 
-# --- Task Display ---
-st.markdown("### 📋 Your Tasks")
+        submitted = st.form_submit_button("➕ Add", use_container_width=True)
 
-# Apply search filter
-filtered_tasks = [
-    task for task in st.session_state.tasks
-    if search_query.lower() in task["title"].lower() or search_query.lower() in task["description"].lower()
-]
+        if submitted and title:
+            st.session_state.tasks.append({
+                "title": title,
+                "notes": notes,
+                "due": due,
+                "priority": priority,
+                "tags": tags,
+                "created_at": datetime.datetime.now(),
+                "completed": False
+            })
 
-# Apply status filter
-if filter_option == "Active":
-    filtered_tasks = [t for t in filtered_tasks if not t["completed"]]
-elif filter_option == "Completed":
-    filtered_tasks = [t for t in filtered_tasks if t["completed"]]
+# --- Segmented Control for Views ---
+colA, colB, colC, colD, colE = st.columns([1, 1, 1, 2, 2])
 
-# Apply sorting
-if sort_option == "Priority":
-    priority_order = {"High": 1, "Medium": 2, "Low": 3}
-    filtered_tasks = sorted(filtered_tasks, key=lambda x: priority_order[x["priority"]])
-elif sort_option == "Date":
-    filtered_tasks = sorted(filtered_tasks, key=lambda x: x["due_date"])
+with colA:
+    if st.button("All", use_container_width=True):
+        st.session_state.view = "All"
+with colB:
+    if st.button("Active", use_container_width=True):
+        st.session_state.view = "Active"
+with colC:
+    if st.button("Completed", use_container_width=True):
+        st.session_state.view = "Completed"
+with colD:
+    if st.button("Clear completed", use_container_width=True):
+        st.session_state.tasks = [t for t in st.session_state.tasks if not t["completed"]]
+with colE:
+    if st.button("Reset", use_container_width=True):
+        st.session_state.tasks = []
 
-# Display tasks
-for idx, task in enumerate(filtered_tasks):
-    st.markdown(
-        f"""
-        <div class="task-card">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <strong class="{'completed' if task['completed'] else ''}">{task['title']}</strong>
-                    <span class="priority-pill">{task['priority'].upper()}</span>
-                    <span style="margin-left:10px; font-size:13px; color:#6b7280;">📅 {task['due_date']}</span>
-                </div>
-                <div>
-                    <input type="checkbox" {'checked' if task['completed'] else ''} onclick="window.location.href='?toggle={idx}'">
-                </div>
-            </div>
-            <p class="{'completed' if task['completed'] else ''}">{task['description']}</p>
-            <small style="color:#9ca3af;">Added { (datetime.datetime.now() - task['created_at']).seconds }s ago</small>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+search = st.text_input("🔍 Search tasks", label_visibility="collapsed")
+
+# --- Filter & Search ---
+tasks = st.session_state.tasks
+
+if st.session_state.view == "Active":
+    tasks = [t for t in tasks if not t["completed"]]
+elif st.session_state.view == "Completed":
+    tasks = [t for t in tasks if t["completed"]]
+
+if search:
+    tasks = [t for t in tasks if search.lower() in t["title"].lower()]
+
+# --- Show Tasks ---
+st.subheader("Your Tasks")
+if not tasks:
+    st.info("No tasks match. Try adding one above ✍️")
+else:
+    for i, task in enumerate(tasks):
+        with st.container():
+            col1, col2, col3 = st.columns([0.1, 7, 0.5])
+            with col1:
+                done = st.checkbox("", value=task["completed"], key=f"done_{i}")
+                st.session_state.tasks[i]["completed"] = done
+            with col2:
+                title_class = "completed" if task["completed"] else ""
+                st.markdown(
+                    f"""
+                    <div class="task-card">
+                        <span class="{title_class}"><b>{task['title']}</b></span>
+                        <span class="priority-pill">{task['priority'].upper()}</span>
+                        📅 {task['due']}
+                        <div style="margin-top:6px; font-size:14px;">{task['notes']}</div>
+                        <div style="font-size:12px; color:#6b7280;">
+                            Added {task['created_at'].strftime('%Y-%m-%d %H:%M')}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with col3:
+                if st.button("🗑️", key=f"delete_{i}"):
+                    st.session_state.tasks.remove(task)
+                    st.rerun()
