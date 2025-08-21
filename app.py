@@ -16,19 +16,18 @@ with st.form("add_task"):
     submitted = st.form_submit_button("Add Task")
 
     if submitted:
-        if title.strip():  # ✅ prevent empty tasks
-            st.session_state.tasks.append({
-                "title": title,
-                "notes": notes,
-                "due": due,
-                "priority": priority,
-                "created_at": datetime.datetime.now()
-            })
-            st.success("Task added!")
-            st.experimental_rerun()
+        if title.strip():
+          st.session_state.tasks.append({
+            "title": title,
+            "notes": notes,
+            "due": due,
+            "priority": priority,
+            "created_at": datetime.datetime.now()
+          })
+          st.success("Task added!")
+          st.rerun()   # ✅ new rerun method
         else:
-            st.warning("⚠️ Please enter a task title before adding.")
-
+          st.warning("⚠️ Please enter a task title before adding.")
 # Show tasks
 st.subheader("Your Tasks")
 if not st.session_state.tasks:
@@ -47,3 +46,4 @@ else:
         if st.button(f"Delete {i}"):
             st.session_state.tasks.pop(i)
             st.experimental_rerun()
+
