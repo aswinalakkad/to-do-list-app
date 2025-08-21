@@ -1,7 +1,7 @@
 import streamlit as st
 import datetime
 
-st.title("📝 To-Do App")
+st.title("📝 To-Do App with Filters & Sorting")
 
 # --- Session state ---
 if "tasks" not in st.session_state:
@@ -23,7 +23,7 @@ with st.form("add_task", clear_on_submit=True):
                 "due": due,
                 "priority": priority,
                 "created_at": datetime.datetime.now(),
-                "completed": False   # ✅ new field
+                "completed": False
             })
             st.success("Task added!")
             st.rerun()
@@ -33,9 +33,49 @@ with st.form("add_task", clear_on_submit=True):
 # --- Tabs for Active / Completed ---
 tab1, tab2 = st.tabs(["📌 Active Tasks", "✅ Completed Tasks"])
 
+# === Sidebar Filters & Sorting ===
+st.sidebar.header("🔍 Filters & Sorting")
+
+priority_filter = st.sidebar.multiselect(
+    "Filter by Priority",
+    ["low", "medium", "high"],
+    default=["low", "medium", "high"]
+)
+
+date_range = st.sidebar.date_input(
+    "Filter by Due Date Range",
+    value=(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=30))
+)
+
+sort_by = st.sidebar.selectbox(
+    "Sort By",
+    ["due", "priority", "created_at"]
+)
+
+sort_order = st.sidebar.radio("Sort Order", ["Ascending", "Descending"])
+
+# --- Helper: filter & sort ---
+def filter_and_sort(tasks):
+    filtered = [t for t in tasks if t["priority"] in priority_filter]
+
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start, end = date_range
+        filtered = [t for t in filtered if start <= t["due"] <= end]
+
+    reverse = (sort_order == "Descending")
+
+    if sort_by == "priority":
+        # custom sort: low < medium < high
+        priority_order = {"low": 0, "medium": 1, "high": 2}
+        filtered.sort(key=lambda t: priority_order[t["priority"]], reverse=reverse)
+    else:
+        filtered.sort(key=lambda t: t[sort_by], reverse=reverse)
+
+    return filtered
+
 # --- Active Tasks ---
 with tab1:
-    active_tasks = [t for t in st.session_state.tasks if not t["completed"]]
+    active_tasks = filter_and_sort([t for t in st.session_state.tasks if not t["completed"]])
     if not active_tasks:
         st.info("No active tasks 🎉")
     else:
@@ -54,7 +94,7 @@ with tab1:
 
 # --- Completed Tasks ---
 with tab2:
-    completed_tasks = [t for t in st.session_state.tasks if t["completed"]]
+    completed_tasks = filter_and_sort([t for t in st.session_state.tasks if t["completed"]])
     if not completed_tasks:
         st.info("No completed tasks yet ✅")
     else:
