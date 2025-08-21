@@ -57,6 +57,8 @@ if "tasks" not in st.session_state:
 if "view" not in st.session_state:
     st.session_state.view = "All"
 
+# --- Compact Toggle ---
+compact_mode = st.toggle("Compact", value=False)
 
 # --- Add Task ---
 with st.container():
