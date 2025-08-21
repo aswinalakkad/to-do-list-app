@@ -1,19 +1,7 @@
 import streamlit as st
-import openai
-import os
 
-# Set page config
-st.set_page_config(page_title="AI To-Do List", page_icon="🤖📝")
-st.title("🤖📝 AI-Powered To-Do List")
-
-# Get API key (from Streamlit secrets or input)
-if "OPENAI_API_KEY" not in st.secrets:
-    api_key = st.text_input("Enter your OpenAI API Key:", type="password")
-else:
-    api_key = st.secrets["OPENAI_API_KEY"]
-
-if api_key:
-    openai.api_key = api_key
+st.set_page_config(page_title="To-Do List", page_icon="📝")
+st.title("📝 Simple To-Do List")
 
 # Initialize tasks
 if "tasks" not in st.session_state:
@@ -47,28 +35,3 @@ else:
             if st.button("❌ Delete", key=f"del{i}"):
                 del st.session_state.tasks[i]
                 st.experimental_rerun()
-
-# AI Suggestions Section
-st.subheader("🤖 AI Task Suggestions")
-if api_key:
-    if st.button("✨ Suggest Tasks"):
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant suggesting daily tasks."},
-                    {"role": "user", "content": "Suggest 5 useful tasks for today in bullet points."}
-                ],
-                max_tokens=150
-            )
-            ai_tasks = response["choices"][0]["message"]["content"].split("\n")
-            st.write("Here are some ideas:")
-            for t in ai_tasks:
-                if t.strip():
-                    if st.button(f"Add: {t}", key=f"ai{t}"):
-                        st.session_state.tasks.append({"task": t, "done": False})
-                        st.experimental_rerun()
-        except Exception as e:
-            st.error(f"Error: {e}")
-else:
-    st.warning("Enter your OpenAI API key above to get AI task suggestions.")
