@@ -33,8 +33,7 @@ st.subheader("Your Tasks")
 if not st.session_state.tasks:
     st.info("No tasks yet. Add one above ⬆️")
 else:
-    for i, task in enumerate(st.session_state.tasks):
-        # ✅ Use .get() to avoid KeyError
+    for i, task in enumerate(st.session_state.tasks, start=1):
         title = task.get("title", "Untitled")
         priority = task.get("priority", "medium")
         due = task.get("due", "N/A")
@@ -44,7 +43,7 @@ else:
         st.caption(f"Added {created.strftime('%Y-%m-%d %H:%M')}")
 
         if st.button(f"Delete {i}"):
-            st.session_state.tasks.pop(i)
+            st.session_state.tasks.pop(i-1)  # subtract 1 since index starts from 0 internally
             st.rerun()
 
 
