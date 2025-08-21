@@ -95,20 +95,38 @@ if not tasks:
     st.info("No tasks to show with current filters.")
 else:
     for i, task in enumerate(tasks, start=1):
-        col1, col2, col3 = st.columns([5, 2, 2])
+        with st.container():
+            col1, col2, col3 = st.columns([0.1, 6, 0.5])
 
-        with col1:
-            st.markdown(f"**{task['title']}** (priority: {task['priority']}, due: {task['due']})")
-            st.caption(f"Added {task['created_at'].strftime('%Y-%m-%d %H:%M')}")
-            if task["notes"]:
-                st.write(f"📝 {task['notes']}")
+            # Checkbox for completion
+            with col1:
+                done = st.checkbox("", value=task["completed"], key=f"done_{i}")
+                task["completed"] = done
 
-        with col2:
-            if st.button(f"{'✅ Undo' if task['completed'] else '✔️ Done'} {i}"):
-                task["completed"] = not task["completed"]
-                st.rerun()
+            # Task content
+            with col2:
+                st.markdown(
+                    f"""
+                    <div style='padding:12px; border:1px solid #e5e7eb; border-radius:12px; margin-bottom:8px; background:#f9fafb;'>
+                        <b>{task['title']}</b>
+                        <span style='background-color:#0f172a; color:white; padding:2px 8px; border-radius:8px; font-size:12px;'>
+                            {task['priority'].upper()}
+                        </span>
+                        📅 {task['due']}
+                        <br>
+                        <div style='margin-top:4px; font-size:14px;'>{task['notes'] if task['notes'] else ""}</div>
+                        <div style='font-size:12px; color:#6b7280;'>
+                            Added {task['created_at'].strftime('%Y-%m-%d %H:%M')}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-        with col3:
-            if st.button(f"🗑️ Delete {i}"):
-                st.session_state.tasks.remove(task)
-                st.rerun()
+            # Edit / Delete
+            with col3:
+                edit = st.button("✏️", key=f"edit_{i}")
+                delete = st.button("🗑️", key=f"delete_{i}")
+                if delete:
+                    st.session_state.tasks.remove(task)
+                    st.rerun()
