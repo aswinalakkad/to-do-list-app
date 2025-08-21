@@ -26,7 +26,7 @@ st.markdown(
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .priority-pill {
-        background-color: #6b7280; /* changed to grey */
+        background-color: #6b7280; /* Grey instead of black */
         color: white;
         padding: 3px 10px;
         border-radius: 8px;
@@ -36,71 +36,83 @@ st.markdown(
     }
     .completed {
         text-decoration: line-through;
-        text-decoration-thickness: 2px;
-        text-decoration-color: #9ca3af;
+        color: #9ca3af;
     }
     </style>
 """,
     unsafe_allow_html=True
 )
 
-# --- Session State for tasks ---
+# --- Initialize Session State ---
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# --- Search Option ---
-search_query = st.text_input("🔍 Search tasks")
+# --- Add Task Form ---
+with st.form("task_form", clear_on_submit=True):
+    st.markdown("### ➕ Add New Task")
+    title = st.text_input("Title")  # Added Label
+    description = st.text_area("Description")  # Added Label
+    priority = st.selectbox("Priority", ["Low", "Medium", "High"])
+    due_date = st.date_input("Due Date", datetime.date.today())
+    submitted = st.form_submit_button("Add Task")
 
-# --- Task Input Form ---
-st.subheader("➕ Add New Task")
-
-title = st.text_input("Task Title ✏️", key="title_input")
-description = st.text_area("Task Description 📝", key="desc_input")
-priority = st.selectbox("Priority 🚩", ["LOW", "MEDIUM", "HIGH"])
-due_date = st.date_input("Due Date 📅", datetime.date.today())
-
-if st.button("Add Task"):
-    if title.strip():
+    if submitted and title:
         st.session_state.tasks.append({
             "title": title,
             "description": description,
             "priority": priority,
             "due_date": due_date,
             "completed": False,
-            "added": datetime.datetime.now()
+            "created_at": datetime.datetime.now()
         })
-        st.success("Task added successfully ✅")
-    else:
-        st.warning("⚠️ Please enter a title for the task")
 
-# --- Task List ---
-st.subheader("📋 Your Tasks")
+# --- Search Bar ---
+search_query = st.text_input("🔍 Search tasks", "")
 
-for i, task in enumerate(st.session_state.tasks):
-    # --- Apply search filter ---
-    if search_query.lower() not in task["title"].lower() and search_query.lower() not in task["description"].lower():
-        continue
+# --- Filters ---
+filter_option = st.radio("View", ["All", "Active", "Completed"], horizontal=True)
+sort_option = st.selectbox("Sort by", ["Select All", "Priority", "Date"])
 
-    completed_class = "completed" if task["completed"] else ""
-    with st.container():
-        st.markdown(
-            f"""
-            <div class="task-card">
-                <strong class="{completed_class}">{task['title']}</strong>
-                <span class="priority-pill">{task['priority']}</span> 
-                <span>📅 {task['due_date']}</span>
-                <p class="{completed_class}">{task['description']}</p>
-                <small>Added { (datetime.datetime.now() - task['added']).seconds }s ago</small>
+# --- Task Display ---
+st.markdown("### 📋 Your Tasks")
+
+# Apply search filter
+filtered_tasks = [
+    task for task in st.session_state.tasks
+    if search_query.lower() in task["title"].lower() or search_query.lower() in task["description"].lower()
+]
+
+# Apply status filter
+if filter_option == "Active":
+    filtered_tasks = [t for t in filtered_tasks if not t["completed"]]
+elif filter_option == "Completed":
+    filtered_tasks = [t for t in filtered_tasks if t["completed"]]
+
+# Apply sorting
+if sort_option == "Priority":
+    priority_order = {"High": 1, "Medium": 2, "Low": 3}
+    filtered_tasks = sorted(filtered_tasks, key=lambda x: priority_order[x["priority"]])
+elif sort_option == "Date":
+    filtered_tasks = sorted(filtered_tasks, key=lambda x: x["due_date"])
+
+# Display tasks
+for idx, task in enumerate(filtered_tasks):
+    st.markdown(
+        f"""
+        <div class="task-card">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <strong class="{'completed' if task['completed'] else ''}">{task['title']}</strong>
+                    <span class="priority-pill">{task['priority'].upper()}</span>
+                    <span style="margin-left:10px; font-size:13px; color:#6b7280;">📅 {task['due_date']}</span>
+                </div>
+                <div>
+                    <input type="checkbox" {'checked' if task['completed'] else ''} onclick="window.location.href='?toggle={idx}'">
+                </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        col1, col2 = st.columns([0.2, 0.8])
-        with col1:
-            if st.checkbox("Done", value=task["completed"], key=f"check_{i}"):
-                st.session_state.tasks[i]["completed"] = True
-        with col2:
-            if st.button("❌ Delete", key=f"delete_{i}"):
-                st.session_state.tasks.pop(i)
-                st.experimental_rerun()
+            <p class="{'completed' if task['completed'] else ''}">{task['description']}</p>
+            <small style="color:#9ca3af;">Added { (datetime.datetime.now() - task['created_at']).seconds }s ago</small>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
