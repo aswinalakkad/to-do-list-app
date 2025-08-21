@@ -105,10 +105,11 @@ else:
 
             # Task content
             with col2:
+                title_text = f"<s>{task['title']}</s>" if task["completed"] else task["title"]
                 st.markdown(
                     f"""
                     <div style='padding:12px; border:1px solid #e5e7eb; border-radius:12px; margin-bottom:8px; background:#f9fafb;'>
-                        <b>{task['title']}</b>
+                        <b>{title_text}</b>
                         <span style='background-color:#0f172a; color:white; padding:2px 8px; border-radius:8px; font-size:12px;'>
                             {task['priority'].upper()}
                         </span>
